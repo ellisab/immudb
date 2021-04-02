@@ -36,7 +36,7 @@ func parseOptions() (options *server.Options, err error) {
 	masterAddress := viper.GetString("master-address")
 
 	followerUser := viper.GetString("follower-user")
-	followerPwd := viper.GetString("follower-pwd")
+	followerPwd := viper.GetString("follower-password")
 
 	pidfile, err := c.ResolvePath(viper.GetString("pidfile"), true)
 	if err != nil {

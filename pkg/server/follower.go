@@ -33,33 +33,43 @@ func (s *ImmuServer) IsFollower() bool {
 	return s.master != nil
 }
 
+func (s *ImmuServer) followerLogin() (client.ImmuClient, context.Context, error) {
+	opts := client.DefaultOptions().WithAddress(s.master.address).WithPort(s.master.port)
+
+	ctx := context.Background()
+
+	client, err := client.NewImmuClient(opts)
+	if err != nil {
+		s.Logger.Errorf("Failed to connect. Reason: %v", err)
+		return nil, ctx, err
+	}
+
+	login, err := client.Login(ctx, []byte(s.followerUser), []byte(s.followerPwd))
+	if err != nil {
+		s.Logger.Errorf("Failed to login. Reason: %v", err)
+		return nil, ctx, err
+	}
+
+	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("authorization", login.GetToken()))
+
+	return client, ctx, nil
+}
+
 func (s *ImmuServer) follow() {
 	s.Logger.Infof("Following master %s:%d", s.master.address, s.master.port)
 	defer func() {
 		s.Logger.Infof("Replication stopped.")
 	}()
 
-	opts := client.DefaultOptions().WithAddress(s.master.address).WithPort(s.master.port)
-
-	client, err := client.NewImmuClient(opts)
+	client, ctx, err := s.followerLogin()
 	if err != nil {
-		s.Logger.Errorf("Failed to connect. Reason: %v", err)
-		return
+		s.Logger.Errorf("Failed to login. Reason %s %s: %v", s.followerUser, s.followerPwd, err)
 	}
-
-	ctx := context.Background()
-
-	login, err := client.Login(ctx, []byte(s.followerUser), []byte(s.followerPwd))
-	if err != nil {
-		s.Logger.Errorf("Failed to login. Reason: %v", err)
-		return
-	}
-	ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs("authorization", login.GetToken()))
 	defer client.Logout(ctx)
 
 	for {
 		select {
-		case <-time.Tick(100 * time.Millisecond):
+		case <-time.Tick(1 * time.Millisecond):
 			{
 				db := s.dbList.GetByIndex(s.databasenameToIndex[s.Options.defaultDbName])
 
@@ -77,6 +87,15 @@ func (s *ImmuServer) follow() {
 				}
 				if err != nil {
 					s.Logger.Warningf("Replication got error when trying to fetch tx from master: %v", err)
+
+					time.Sleep(5 * time.Second)
+
+					client, ctx, err = s.followerLogin()
+					if err != nil {
+						s.Logger.Errorf("Failed to login. Reason: %v", err)
+						continue
+					}
+
 					continue
 				}
 
@@ -86,6 +105,15 @@ func (s *ImmuServer) follow() {
 					e, err := client.GetAt(ctx, kv.Key, tx.Metadata.Id)
 					if err != nil {
 						s.Logger.Warningf("Replication got error when trying to fetch tx data from master: %v", err)
+
+						time.Sleep(5 * time.Second)
+
+						client, ctx, err = s.followerLogin()
+						if err != nil {
+							s.Logger.Errorf("Failed to login. Reason: %v", err)
+							continue
+						}
+
 						return
 					}
 
