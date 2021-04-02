@@ -18,10 +18,11 @@ package server
 
 import (
 	"fmt"
-	"github.com/codenotary/immudb/pkg/stream"
 	"net"
 	"strconv"
 	"strings"
+
+	"github.com/codenotary/immudb/pkg/stream"
 
 	"github.com/codenotary/immudb/embedded/store"
 	"github.com/codenotary/immudb/pkg/auth"
@@ -36,6 +37,10 @@ type Options struct {
 	Network             string
 	Address             string
 	Port                int
+	MasterAddress       string
+	MasterPort          int
+	FollowerUser        string
+	FollowerPwd         string
 	MetricsPort         int
 	Config              string
 	Pidfile             string
@@ -67,6 +72,8 @@ func DefaultOptions() *Options {
 		Network:             "tcp",
 		Address:             "0.0.0.0",
 		Port:                3322,
+		MasterAddress:       "",
+		MasterPort:          3322,
 		MetricsPort:         9497,
 		Config:              "configs/immudb.toml",
 		Pidfile:             "",
@@ -122,6 +129,32 @@ func (o *Options) WithPort(port int) *Options {
 	if port > 0 {
 		o.Port = port
 	}
+	return o
+}
+
+// WithMasterAddress sets master address
+func (o *Options) WithMasterAddress(address string) *Options {
+	o.MasterAddress = address
+	return o
+}
+
+// WithMasterPort master port
+func (o *Options) WithMasterPort(port int) *Options {
+	if port > 0 {
+		o.MasterPort = port
+	}
+	return o
+}
+
+// WithFollowerUser sets follower user
+func (o *Options) WithFollowerUser(user string) *Options {
+	o.FollowerUser = user
+	return o
+}
+
+// WithFollowerPwd sets follower pwd
+func (o *Options) WithFollowerPwd(pwd string) *Options {
+	o.FollowerPwd = pwd
 	return o
 }
 
@@ -216,6 +249,15 @@ func (o *Options) String() string {
 	opts = append(opts, "================ Config ================")
 	opts = append(opts, rightPad("Data dir", o.Dir))
 	opts = append(opts, rightPad("Address", fmt.Sprintf("%s:%d", o.Address, o.Port)))
+
+	opts = append(opts, "----------------------------------------")
+	opts = append(opts, rightPad("Master", o.MasterAddress == ""))
+	if o.MasterAddress != "" {
+		opts = append(opts, rightPad("Master Address", fmt.Sprintf("%s:%d", o.MasterAddress, o.MasterPort)))
+		opts = append(opts, rightPad("Follower user", fmt.Sprintf("%s", o.FollowerUser)))
+	}
+	opts = append(opts, "----------------------------------------")
+
 	if o.MetricsServer {
 		opts = append(opts, rightPad("Metrics address", fmt.Sprintf("%s:%d/metrics", o.Address, o.MetricsPort)))
 	}

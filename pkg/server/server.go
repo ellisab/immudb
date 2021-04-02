@@ -23,7 +23,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/codenotary/immudb/pkg/stream"
 	"io/ioutil"
 	"log"
 	"math"
@@ -36,6 +35,8 @@ import (
 	"syscall"
 	"time"
 	"unicode"
+
+	"github.com/codenotary/immudb/pkg/stream"
 
 	"github.com/codenotary/immudb/pkg/database"
 
@@ -61,6 +62,8 @@ const (
 
 var ErrEmptyAdminPassword = fmt.Errorf("Admin password cannot be empty")
 var ErrIllegalArguments = fmt.Errorf("Illegal arguments")
+
+var ErrNotMaster = errors.New("instance is not master")
 
 var startedAt time.Time
 
@@ -167,6 +170,15 @@ func (s *ImmuServer) Initialize() error {
 	}
 	//<===
 
+	if s.Options.MasterAddress != "" {
+		if s.Options.FollowerUser == "" {
+			return errors.New("follower username not set")
+		}
+		s.master = &ServerAddress{address: s.Options.MasterAddress, port: s.Options.MasterPort}
+		s.followerUser = s.Options.FollowerUser
+		s.followerPwd = s.Options.FollowerPwd
+	}
+
 	uuidContext := NewUUIDContext(s.UUID)
 
 	uis := []grpc.UnaryServerInterceptor{
@@ -223,6 +235,10 @@ func (s *ImmuServer) Start() (err error) {
 			log.Fatal(err)
 		}
 	}()
+
+	if s.IsFollower() {
+		go s.follow()
+	}
 
 	s.mux.Unlock()
 	<-s.quit
@@ -446,7 +462,7 @@ func (s *ImmuServer) Stop() error {
 
 	s.Logger.Infof("Stopping immudb:\n%v", s.Options)
 
-	defer func() { s.quit <- struct{}{} }()
+	defer func() { close(s.quit) }()
 
 	if !s.Options.usingCustomListener {
 		s.GrpcServer.Stop()
@@ -688,18 +704,26 @@ func (s *ImmuServer) CurrentState(ctx context.Context, e *empty.Empty) (*schema.
 }
 
 // Set ...
-func (s *ImmuServer) Set(ctx context.Context, kv *schema.SetRequest) (*schema.TxMetadata, error) {
+func (s *ImmuServer) Set(ctx context.Context, req *schema.SetRequest) (*schema.TxMetadata, error) {
+	if s.IsFollower() {
+		return nil, ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(ctx, "Set")
 
 	if err != nil {
 		return nil, err
 	}
 
-	return s.dbList.GetByIndex(ind).Set(kv)
+	return s.dbList.GetByIndex(ind).Set(req)
 }
 
 // VerifiableSet ...
 func (s *ImmuServer) VerifiableSet(ctx context.Context, req *schema.VerifiableSetRequest) (*schema.VerifiableTx, error) {
+	if s.IsFollower() {
+		return nil, ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(ctx, "VerifiableSet")
 	if err != nil {
 		return nil, err
@@ -875,6 +899,10 @@ func (s *ImmuServer) History(ctx context.Context, req *schema.HistoryRequest) (*
 
 // SetReference ...
 func (s *ImmuServer) SetReference(ctx context.Context, req *schema.ReferenceRequest) (*schema.TxMetadata, error) {
+	if s.IsFollower() {
+		return nil, ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(ctx, "SetReference")
 	if err != nil {
 		return nil, err
@@ -918,6 +946,10 @@ func (s *ImmuServer) VerifiableSetReference(ctx context.Context, req *schema.Ver
 
 // ZAdd ...
 func (s *ImmuServer) ZAdd(ctx context.Context, req *schema.ZAddRequest) (*schema.TxMetadata, error) {
+	if s.IsFollower() {
+		return nil, ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(ctx, "ZAdd")
 	if err != nil {
 		return nil, err
@@ -938,6 +970,10 @@ func (s *ImmuServer) ZScan(ctx context.Context, req *schema.ZScanRequest) (*sche
 
 // VerifiableZAdd ...
 func (s *ImmuServer) VerifiableZAdd(ctx context.Context, req *schema.VerifiableZAddRequest) (*schema.VerifiableTx, error) {
+	if s.IsFollower() {
+		return nil, ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(ctx, "VerifiableZAdd")
 	if err != nil {
 		return nil, err

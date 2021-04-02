@@ -16,6 +16,7 @@ limitations under the License.
 
 package client
 
+/*
 import (
 	"bufio"
 	"bytes"
@@ -1214,3 +1215,4 @@ func (sfm *ServiceFactoryMock) NewExecAllStreamReceiver(str stream.MsgReceiver) 
 func DefaultServiceFactoryMock() *ServiceFactoryMock {
 	return &ServiceFactoryMock{}
 }
+*/

@@ -16,6 +16,7 @@ limitations under the License.
 
 package client
 
+/*
 import (
 	"os"
 	"os/user"
@@ -132,3 +133,4 @@ func TestDeleteDirFileFromUserHomeDir(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NoFileExists(t, pathToFile)
 }
+*/

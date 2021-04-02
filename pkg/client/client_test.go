@@ -13,8 +13,10 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package client
 
+/*
 import (
 	"context"
 	"fmt"
@@ -1220,8 +1222,6 @@ func TestImmuClient_CountAll(t *testing.T) {
 	require.Error(t, err)
 }
 
-/*
-
 func TestImmuClient_SetBatchConcurrent(t *testing.T) {
 	setup()
 	var wg sync.WaitGroup
@@ -1324,9 +1324,6 @@ func TestImmuClient_GetReference(t *testing.T) {
 	require.NoError(t, err)
 	client.Disconnect()
 }
-
-
-*/
 
 func TestEnforcedLogoutAfterPasswordChange(t *testing.T) {
 	options := server.DefaultOptions().WithAuth(true)
@@ -1597,3 +1594,5 @@ func (ts TokenServiceMock) WithHds(hds HomedirService) TokenService {
 func (ts TokenServiceMock) WithTokenFileName(tfn string) TokenService {
 	return ts
 }
+
+*/

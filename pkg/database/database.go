@@ -44,6 +44,7 @@ type DB interface {
 	Health(e *empty.Empty) (*schema.HealthResponse, error)
 	CurrentState() (*schema.ImmutableState, error)
 	Set(req *schema.SetRequest) (*schema.TxMetadata, error)
+	ReplicatedSet(kvs []*schema.KeyValue, noWait bool, ts int64, blTxID uint64) (*schema.TxMetadata, error)
 	Get(req *schema.KeyRequest) (*schema.Entry, error)
 	VerifiableSet(req *schema.VerifiableSetRequest) (*schema.VerifiableTx, error)
 	VerifiableGet(req *schema.VerifiableGetRequest) (*schema.VerifiableEntry, error)
@@ -174,6 +175,32 @@ func (d *db) set(req *schema.SetRequest) (*schema.TxMetadata, error) {
 	}
 
 	txMetatadata, err := d.st.Commit(entries, !req.NoWait)
+	if err != nil {
+		return nil, err
+	}
+
+	return schema.TxMetatadaTo(txMetatadata), nil
+}
+
+func (d *db) ReplicatedSet(kvs []*schema.KeyValue, noWait bool, ts int64, blTxID uint64) (*schema.TxMetadata, error) {
+	if len(kvs) == 0 {
+		return nil, ErrIllegalArguments
+	}
+
+	d.mutex.RLock()
+	defer d.mutex.RUnlock()
+
+	entries := make([]*store.KV, len(kvs))
+
+	for i, kv := range kvs {
+		if len(kv.Key) == 0 {
+			return nil, ErrIllegalArguments
+		}
+
+		entries[i] = EncodeKV(kv.Key, kv.Value)
+	}
+
+	txMetatadata, err := d.st.ReplicatedCommit(entries, !noWait, ts, blTxID)
 	if err != nil {
 		return nil, err
 	}

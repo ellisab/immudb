@@ -57,6 +57,10 @@ func (s *ImmuServer) StreamGet(kr *schema.KeyRequest, str schema.ImmuService_Str
 
 // StreamSet set a stream of key-values in the internal store
 func (s *ImmuServer) StreamSet(str schema.ImmuService_StreamSetServer) error {
+	if s.IsFollower() {
+		return ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(str.Context(), "StreamSet")
 	if err != nil {
 		return err
@@ -185,6 +189,10 @@ func (s *ImmuServer) StreamVerifiableGet(req *schema.VerifiableGetRequest, str s
 
 // StreamVerifiableSet ...
 func (s *ImmuServer) StreamVerifiableSet(str schema.ImmuService_StreamVerifiableSetServer) error {
+	if s.IsFollower() {
+		return ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(str.Context(), "StreamVerifiableSet")
 	if err != nil {
 		return err
@@ -387,6 +395,10 @@ func (s *ImmuServer) StreamHistory(request *schema.HistoryRequest, server schema
 }
 
 func (s *ImmuServer) StreamExecAll(str schema.ImmuService_StreamExecAllServer) error {
+	if s.IsFollower() {
+		return ErrNotMaster
+	}
+
 	ind, err := s.getDbIndexFromCtx(str.Context(), "StreamSet")
 	if err != nil {
 		return err

@@ -1,5 +1,6 @@
 package client
 
+/*
 import (
 	"bufio"
 	"bytes"
@@ -121,3 +122,4 @@ func TestImmuClient_StreamHistory(t *testing.T) {
 
 	require.Len(t, historyResp.Entries, 100)
 }
+*/

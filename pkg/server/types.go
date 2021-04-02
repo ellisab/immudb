@@ -17,11 +17,12 @@ limitations under the License.
 package server
 
 import (
-	"github.com/codenotary/immudb/pkg/stream"
 	"net"
 	"net/http"
 	"os"
 	"sync"
+
+	"github.com/codenotary/immudb/pkg/stream"
 
 	"github.com/codenotary/immudb/pkg/database"
 	"github.com/rs/xid"
@@ -69,6 +70,14 @@ type ImmuServer struct {
 	mux                  sync.Mutex
 	StateSigner          StateSigner
 	StreamServiceFactory stream.ServiceFactory
+	master               *ServerAddress
+	followerUser         string
+	followerPwd          string
+}
+
+type ServerAddress struct {
+	address string
+	port    int
 }
 
 // DefaultServer ...

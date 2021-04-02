@@ -28,11 +28,16 @@ func parseOptions() (options *server.Options, err error) {
 	if err != nil {
 		return options, err
 	}
+
 	port := viper.GetInt("port")
 	address := viper.GetString("address")
-	if err != nil {
-		return options, err
-	}
+
+	masterPort := viper.GetInt("master-port")
+	masterAddress := viper.GetString("master-address")
+
+	followerUser := viper.GetString("follower-user")
+	followerPwd := viper.GetString("follower-pwd")
+
 	pidfile, err := c.ResolvePath(viper.GetString("pidfile"), true)
 	if err != nil {
 		return options, err
@@ -73,6 +78,10 @@ func parseOptions() (options *server.Options, err error) {
 		WithDir(dir).
 		WithPort(port).
 		WithAddress(address).
+		WithMasterAddress(masterAddress).
+		WithMasterPort(masterPort).
+		WithFollowerUser(followerUser).
+		WithFollowerPwd(followerPwd).
 		WithPidfile(pidfile).
 		WithLogfile(logfile).
 		WithMTLs(mtls).
@@ -102,6 +111,10 @@ func (cl *Commandline) setupFlags(cmd *cobra.Command, options *server.Options, m
 	cmd.Flags().String("dir", options.Dir, "data folder")
 	cmd.Flags().IntP("port", "p", options.Port, "port number")
 	cmd.Flags().StringP("address", "a", options.Address, "bind address")
+	cmd.Flags().Int("master-port", options.MasterPort, "master port number")
+	cmd.Flags().String("master-address", options.MasterAddress, "master bind address")
+	cmd.Flags().String("follower-user", options.FollowerUser, "follower username as registered in the master")
+	cmd.Flags().String("follower-password", options.FollowerPwd, "follower password as registered in the master")
 	cmd.PersistentFlags().StringVar(&cl.config.CfgFn, "config", "", "config file (default path are configs or $HOME. Default filename is immudb.toml)")
 	cmd.Flags().String("pidfile", options.Pidfile, "pid path with filename. E.g. /var/run/immudb.pid")
 	cmd.Flags().String("logfile", options.Logfile, "log path with filename. E.g. /tmp/immudb/immudb.log")
@@ -125,6 +138,8 @@ func setupDefaults(options *server.Options, mtlsOptions *server.MTLsOptions) {
 	viper.SetDefault("dir", options.Dir)
 	viper.SetDefault("port", options.Port)
 	viper.SetDefault("address", options.Address)
+	viper.SetDefault("master-port", options.MasterPort)
+	viper.SetDefault("master-address", options.MasterAddress)
 	viper.SetDefault("pidfile", options.Pidfile)
 	viper.SetDefault("logfile", options.Logfile)
 	viper.SetDefault("mtls", options.MTLs)
